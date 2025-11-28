@@ -1,0 +1,1 @@
+"""Kalag Backend Application"""

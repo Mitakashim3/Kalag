@@ -4,48 +4,94 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Kalag Green Palette - Light Mode */
+    --background: 120 10% 97%;
+    --foreground: 160 30% 10%;
+    
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 160 30% 10%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 160 30% 10%;
+    
+    /* Primary: Deep forest green */
+    --primary: 152 45% 28%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary: Muted emerald */
+    --secondary: 150 20% 90%;
+    --secondary-foreground: 152 45% 20%;
+    
+    /* Muted: Soft neutral with green tint */
+    --muted: 140 15% 92%;
+    --muted-foreground: 150 10% 40%;
+    
+    /* Accent: Light emerald */
+    --accent: 150 35% 85%;
+    --accent-foreground: 152 45% 20%;
+    
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
+    --ring: 152 45% 40%;
+    --radius: 0.75rem;
+    
+    /* Kalag custom properties */
+    --kalag-glow: 152 60% 45%;
+    --kalag-wisp: 152 40% 70%;
+    --kalag-orb: 150 50% 60%;
+    --kalag-surface: 0 0% 100%;
+    --kalag-glass: 0 0% 100% / 0.7;
+    --kalag-overlay: 160 30% 10% / 0.05;
+    --kalag-gradient-start: 152 45% 28%;
+    --kalag-gradient-end: 170 35% 35%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Kalag Green Palette - Dark Mode */
+    --background: 160 40% 5%;
+    --foreground: 150 15% 92%;
+    
+    --card: 160 35% 8%;
+    --card-foreground: 150 15% 92%;
+    
+    --popover: 160 35% 8%;
+    --popover-foreground: 150 15% 92%;
+    
+    /* Primary: Bright emerald for contrast */
+    --primary: 152 55% 45%;
+    --primary-foreground: 160 40% 5%;
+    
+    /* Secondary: Dark muted green */
+    --secondary: 160 30% 15%;
+    --secondary-foreground: 150 15% 92%;
+    
+    /* Muted: Deep green tint */
+    --muted: 160 25% 12%;
+    --muted-foreground: 150 10% 55%;
+    
+    /* Accent: Subtle glow */
+    --accent: 155 30% 18%;
+    --accent-foreground: 150 15% 92%;
+    
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 160 25% 15%;
+    --input: 160 25% 15%;
+    --ring: 152 55% 45%;
+    
+    /* Kalag custom properties - Dark */
+    --kalag-glow: 152 60% 50%;
+    --kalag-wisp: 152 35% 35%;
+    --kalag-orb: 150 45% 40%;
+    --kalag-surface: 160 35% 8%;
+    --kalag-glass: 160 35% 12% / 0.8;
+    --kalag-overlay: 150 15% 92% / 0.03;
+    --kalag-gradient-start: 152 55% 40%;
+    --kalag-gradient-end: 170 45% 30%;
   }
 }
 
@@ -53,12 +99,184 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    overscroll-behavior-y: contain;
+    transition: background-color 0.5s ease, color 0.3s ease;
   }
 }
 
-/* Mobile-first responsive utilities */
+@layer components {
+  /* Glassmorphism Panel */
+  .glass-panel {
+    @apply backdrop-blur-xl border border-white/20;
+    background: hsl(var(--kalag-glass));
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  
+  .dark .glass-panel {
+    @apply border-white/10;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  
+  /* Soul Glow Effect */
+  .soul-glow {
+    box-shadow: 
+      0 0 20px hsl(var(--kalag-glow) / 0.15),
+      0 0 40px hsl(var(--kalag-glow) / 0.1),
+      0 0 80px hsl(var(--kalag-glow) / 0.05);
+  }
+  
+  .soul-glow-intense {
+    box-shadow: 
+      0 0 30px hsl(var(--kalag-glow) / 0.25),
+      0 0 60px hsl(var(--kalag-glow) / 0.15),
+      0 0 100px hsl(var(--kalag-glow) / 0.1);
+  }
+  
+  /* Wisp Animation */
+  @keyframes wisp-float {
+    0%, 100% {
+      transform: translateY(0) translateX(0) scale(1);
+      opacity: 0.6;
+    }
+    25% {
+      transform: translateY(-20px) translateX(10px) scale(1.05);
+      opacity: 0.8;
+    }
+    50% {
+      transform: translateY(-10px) translateX(-5px) scale(0.95);
+      opacity: 0.5;
+    }
+    75% {
+      transform: translateY(-30px) translateX(15px) scale(1.02);
+      opacity: 0.7;
+    }
+  }
+  
+  @keyframes orb-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.8;
+    }
+  }
+  
+  @keyframes soul-drift {
+    0% {
+      transform: translateY(0) rotate(0deg);
+    }
+    100% {
+      transform: translateY(-100vh) rotate(360deg);
+    }
+  }
+  
+  @keyframes float-gentle {
+    0%, 100% {
+      transform: translateY(0px) rotateX(10deg) rotateY(-10deg);
+    }
+    50% {
+      transform: translateY(-10px) rotateX(12deg) rotateY(-8deg);
+    }
+  }
+  
+  .wisp {
+    animation: wisp-float 8s ease-in-out infinite;
+  }
+  
+  .orb {
+    animation: orb-pulse 4s ease-in-out infinite;
+  }
+  
+  .float-gentle {
+    animation: float-gentle 6s ease-in-out infinite;
+  }
+  
+  /* Gradient Backgrounds */
+  .gradient-soul {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--kalag-gradient-start)) 0%,
+      hsl(var(--kalag-gradient-end)) 100%
+    );
+  }
+  
+  .gradient-soul-subtle {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--kalag-gradient-start) / 0.1) 0%,
+      hsl(var(--kalag-gradient-end) / 0.05) 100%
+    );
+  }
+  
+  /* Card Hover Effects */
+  .card-ethereal {
+    @apply relative overflow-hidden transition-all duration-500;
+  }
+  
+  .card-ethereal::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--kalag-glow) / 0.1) 0%,
+      transparent 50%
+    );
+  }
+  
+  .card-ethereal:hover::before {
+    @apply opacity-100;
+  }
+  
+  .card-ethereal:hover {
+    @apply shadow-lg;
+    transform: translateY(-2px);
+  }
+  
+  /* Focus States */
+  .focus-soul:focus {
+    @apply outline-none ring-2 ring-offset-2;
+    ring-color: hsl(var(--kalag-glow));
+    box-shadow: 0 0 20px hsl(var(--kalag-glow) / 0.3);
+  }
+  
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+
 @layer utilities {
   .safe-top {
     padding-top: env(safe-area-inset-top);
@@ -72,34 +290,37 @@
   .safe-right {
     padding-right: env(safe-area-inset-right);
   }
-}
-
-/* PWA app-like feel */
-html {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  overscroll-behavior: none;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* Prevent pull-to-refresh on mobile */
-body {
-  overscroll-behavior-y: contain;
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Hide scrollbar but keep functionality */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  
+  /* Text Gradient */
+  .text-gradient-soul {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--kalag-gradient-start)) 0%,
+      hsl(var(--kalag-gradient-end)) 100%
+    );
+  }
+  
+  /* Backdrop Blur Levels */
+  .backdrop-blur-soul {
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Perspective for 3D */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
 }

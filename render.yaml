@@ -5,7 +5,9 @@ services:
   - type: web
     name: kalag-api
     env: python
-    region: oregon
+    # Recommended region for lower latency for Philippines users
+    # Use 'singapore' (or nearest asia region available in your Render account)
+    region: singapore
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
@@ -36,5 +38,8 @@ services:
 databases:
   - name: kalag-db
     plan: free
-    region: oregon
-    postgresMajorVersion: 15
+    # Keep the DB region same as the backend to avoid cross-region latency
+    region: singapore
+    # NOTE: Do not force a specific major version here if you already have
+    # an existing database in Render. Removing `postgresMajorVersion` avoids
+    # the "cannot downgrade Postgres major version" error.

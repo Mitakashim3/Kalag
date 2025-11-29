@@ -32,7 +32,8 @@ google-generativeai==0.3.2
 # google-genai is the newer SDK
 
 # Vector Database
-qdrant-client==1.7.0
+# Use a version that supports Python 3.12/3.13 environments on Render
+qdrant-client==1.16.1
 
 # Document Processing
 llama-parse==0.3.0

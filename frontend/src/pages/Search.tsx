@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -86,25 +86,25 @@ export default function Search() {
 
   const markdownComponents = useMemo(
     () => ({
-      p: ({ children }: { children: ReactNode }) => (
+      p: ({ children }: { children?: React.ReactNode }) => (
         <p className="mb-3 leading-relaxed text-muted-foreground last:mb-0">{children}</p>
       ),
-      strong: ({ children }: { children: ReactNode }) => (
+      strong: ({ children }: { children?: React.ReactNode }) => (
         <strong className="font-semibold text-foreground">{children}</strong>
       ),
-      ul: ({ children }: { children: ReactNode }) => (
+      ul: ({ children }: { children?: React.ReactNode }) => (
         <ul className="mb-3 list-disc pl-5 text-muted-foreground space-y-1">{children}</ul>
       ),
-      ol: ({ children }: { children: ReactNode }) => (
+      ol: ({ children }: { children?: React.ReactNode }) => (
         <ol className="mb-3 list-decimal pl-5 text-muted-foreground space-y-1">{children}</ol>
       ),
-      li: ({ children }: { children: ReactNode }) => (
+      li: ({ children }: { children?: React.ReactNode }) => (
         <li className="leading-relaxed">{children}</li>
       ),
-      em: ({ children }: { children: ReactNode }) => (
+      em: ({ children }: { children?: React.ReactNode }) => (
         <em className="text-foreground/80">{children}</em>
       ),
-      code: ({ children }: { children: ReactNode }) => (
+      code: ({ children }: { children?: React.ReactNode }) => (
         <code className="rounded bg-muted px-1 py-0.5 text-xs text-foreground">{children}</code>
       )
     }),

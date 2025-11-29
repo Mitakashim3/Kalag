@@ -70,6 +70,10 @@ app = FastAPI(
 # Middleware Setup
 # ===========================================
 
+# Log CORS configuration for debugging
+logger.info(f"CORS Origins configured: {settings.cors_origins_list}")
+logger.info(f"Cookie settings - Secure: {settings.cookie_secure}, SameSite: {settings.cookie_samesite}, Domain: {settings.cookie_domain}")
+
 # CORS - Configure for your frontend domain
 app.add_middleware(
     CORSMiddleware,

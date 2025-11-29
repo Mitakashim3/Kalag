@@ -26,9 +26,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # ===========================================
         # Core Security Headers
         # ===========================================
+        # Note: Only set headers if they don't already exist
+        # This prevents overwriting CORS and other important headers
         
         # Prevent MIME type sniffing
-        response.headers["X-Content-Type-Options"] = "nosniff"
+        if "X-Content-Type-Options" not in response.headers:
+            response.headers["X-Content-Type-Options"] = "nosniff"
         
         # Prevent clickjacking by disabling framing
         response.headers["X-Frame-Options"] = "DENY"

@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 import tempfile
 import os
 import logging
+from PIL import Image
 
 from app.config import settings
 
@@ -153,7 +154,8 @@ except ImportError:
 async def render_pdf_pages(
     pdf_path: str,
     output_dir: str,
-    dpi: int = 150
+    dpi: int = 150,
+    max_pages: int = 100
 ) -> List[Dict[str, Any]]:
     """
     Render PDF pages to images for vision analysis.
@@ -166,6 +168,7 @@ async def render_pdf_pages(
         pdf_path: Path to PDF file
         output_dir: Directory to save page images
         dpi: Resolution (150 is good balance of quality vs size)
+        max_pages: Maximum number of pages to render (prevent memory issues)
         
     Returns:
         List of dicts with page info and image paths
@@ -177,12 +180,29 @@ async def render_pdf_pages(
     os.makedirs(output_dir, exist_ok=True)
     
     # Convert PDF pages to images
+    # Use lower DPI for large PDFs to reduce memory usage
+    from pypdf import PdfReader
+    reader = PdfReader(pdf_path)
+    page_count = len(reader.pages)
+    
+    # Limit pages if PDF is too large
+    if page_count > max_pages:
+        logger.warning(f"PDF has {page_count} pages, limiting to first {max_pages} to prevent memory issues")
+        page_count = max_pages
+    
+    # If PDF is large, reduce DPI to prevent memory issues on free tier
+    if page_count > 50:
+        dpi = 100
+        logger.info(f"Large PDF ({page_count} pages), reducing DPI to {dpi}")
+    
     try:
         images = convert_from_path(
             pdf_path,
             dpi=dpi,
             fmt="png",
-            thread_count=2
+            thread_count=1,  # Reduce parallelism to save memory
+            first_page=1,
+            last_page=page_count
         )
     except Exception as e:
         logger.error(f"Error converting PDF to images: {str(e)}")
@@ -192,7 +212,8 @@ async def render_pdf_pages(
                 pdf_path,
                 dpi=dpi,
                 fmt="png",
-                poppler_path=os.environ.get("POPPLER_PATH")
+                poppler_path=os.environ.get("POPPLER_PATH"),
+                thread_count=1
             )
         except Exception as e2:
             logger.error(f"Poppler fallback also failed: {str(e2)}")
@@ -205,8 +226,15 @@ async def render_pdf_pages(
         image_filename = f"page_{page_num:04d}.png"
         image_path = os.path.join(output_dir, image_filename)
         
-        # Save the page image
-        image.save(image_path, "PNG", optimize=True)
+        # Resize large images to save memory and disk space
+        max_dimension = 2048
+        if image.width > max_dimension or image.height > max_dimension:
+            ratio = min(max_dimension / image.width, max_dimension / image.height)
+            new_size = (int(image.width * ratio), int(image.height * ratio))
+            image = image.resize(new_size, Image.Resampling.LANCZOS)
+        
+        # Save the page image with compression
+        image.save(image_path, "PNG", optimize=True, compress_level=6)
         
         page_info.append({
             "page_number": page_num,
@@ -216,6 +244,9 @@ async def render_pdf_pages(
         })
         
         logger.debug(f"Rendered page {page_num} to {image_path}")
+        
+        # Free memory after each page
+        del image
     
     logger.info(f"Rendered {len(images)} pages from {pdf_path}")
     return page_info

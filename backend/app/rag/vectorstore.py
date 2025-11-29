@@ -202,14 +202,18 @@ class VectorStore:
                 )
             )
         
-        results = self.client.search(
+        # Use query_points (correct method for qdrant-client 1.12+)
+        search_result = self.client.query_points(
             collection_name=self.collection_name,
-            query_vector=query_embedding,
-            query_filter=Filter(must=must_conditions),
+            query=query_embedding,
+            query_filter=Filter(must=must_conditions) if must_conditions else None,
             limit=top_k,
             score_threshold=score_threshold,
             with_payload=True
         )
+        
+        # Extract points from the result
+        results = search_result.points
         
         return [
             {

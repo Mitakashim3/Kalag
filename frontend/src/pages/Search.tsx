@@ -51,8 +51,10 @@ function AuthenticatedImage({ src, alt, className }: { src: string; alt: string;
 
   if (error || !imageSrc) {
     return (
-      <div className={`flex items-center justify-center bg-muted text-muted-foreground ${className}`} style={{ minHeight: '100px' }}>
-        <p>Failed to load image</p>
+      <div className={`flex flex-col items-center justify-center bg-muted text-muted-foreground p-4 rounded-lg ${className}`} style={{ minHeight: '150px' }}>
+        <FileText className="w-8 h-8 mb-2 opacity-50" />
+        <p className="text-sm">Image not available</p>
+        <p className="text-xs">Document may still be processing</p>
       </div>
     )
   }

@@ -343,10 +343,18 @@ async def get_page_image(
     )
     page = result.scalar_one_or_none()
     
-    if not page or not os.path.exists(page.image_path):
+    if not page:
+        logger.warning(f"Page not found in database: document={document_id}, page={page_number}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Page image not found"
+            detail="Page not found. Document may still be processing."
+        )
+    
+    if not page.image_path or not os.path.exists(page.image_path):
+        logger.warning(f"Image file not found on disk: {page.image_path}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page image not available. Document may still be processing."
         )
     
     return FileResponse(

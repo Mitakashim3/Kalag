@@ -213,11 +213,12 @@ async def process_document(document_id: str, user_id: str):
             await db.commit()
             
         except Exception as e:
-            # Mark as failed
+            # Mark as failed and log the error
+            logger.error(f"Document processing failed for {document_id}: {str(e)}", exc_info=True)
             document.status = "failed"
             document.processing_error = str(e)
             await db.commit()
-            raise
+            # Don't re-raise - we've already marked it as failed
 
 
 @router.get("/", response_model=DocumentListResponse)

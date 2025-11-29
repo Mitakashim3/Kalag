@@ -79,6 +79,11 @@ class DocumentParser:
         try:
             documents = await self.parser.aload_data(file_path)
             
+            # Check if we actually got data (LlamaParse might return empty on auth failure)
+            if not documents or len(documents) == 0:
+                logger.warning("LlamaParse returned no documents, falling back to pypdf")
+                return await self._parse_with_pypdf(file_path)
+            
             result = {
                 "pages": [],
                 "total_pages": len(documents),
@@ -96,11 +101,11 @@ class DocumentParser:
                 result["pages"].append(page_content)
                 result["raw_text"] += doc.text + "\n\n"
             
-            logger.info(f"Successfully parsed PDF with LlamaParse: {file_path}")
+            logger.info(f"Successfully parsed PDF with LlamaParse: {file_path} ({len(documents)} pages)")
             return result
             
         except Exception as e:
-            logger.error(f"LlamaParse error: {e}, falling back to pypdf")
+            logger.warning(f"LlamaParse failed: {e}, falling back to pypdf")
             return await self._parse_with_pypdf(file_path)
     
     async def _parse_with_pypdf(self, file_path: str) -> Dict[str, Any]:

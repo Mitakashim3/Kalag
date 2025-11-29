@@ -20,7 +20,7 @@ function AuthenticatedImage({ src, alt, className }: { src: string; alt: string;
     setError(false)
 
     api.get(src, { responseType: 'blob' })
-      .then((response) => {
+      .then((response: { data: Blob }) => {
         if (mounted) {
           const url = URL.createObjectURL(response.data)
           setImageSrc(url)

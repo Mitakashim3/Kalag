@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Lightbulb, Sparkles } from 'lucide-react'
+import { Lightbulb, Sparkles, FileText, HelpCircle, Search, Zap } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -33,22 +33,22 @@ export default function QuickTips() {
 
   const tips = [
     {
-      icon: '📄',
+      icon: <FileText className="w-6 h-6 text-primary" />,
       title: 'Upload Rich PDFs',
       description: 'Kalag can read charts, tables, and images in your PDFs using advanced vision AI.',
     },
     {
-      icon: '❓',
+      icon: <HelpCircle className="w-6 h-6 text-primary" />,
       title: 'Ask Specific Questions',
       description: 'Instead of "summarize", try "What was the Q3 revenue mentioned in the financial report?"',
     },
     {
-      icon: '🔍',
+      icon: <Search className="w-6 h-6 text-primary" />,
       title: 'Visual Citations',
       description: 'Every answer comes with visual citations showing exactly where the information was found.',
     },
     {
-      icon: '⚡',
+      icon: <Zap className="w-6 h-6 text-primary" />,
       title: 'Instant Answers',
       description: 'Get AI-powered responses in seconds, with full context from your documents.',
     },

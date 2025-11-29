@@ -11,8 +11,8 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'documents', label: 'Documents', icon: FileText },
   { id: 'search', label: 'Search', icon: Search },
+  { id: 'documents', label: 'Documents', icon: FileText },
 ]
 
 export default function Sidebar({ onNavigate, activeSection }: SidebarProps) {

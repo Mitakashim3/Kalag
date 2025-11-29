@@ -34,9 +34,11 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",")]
     
     # Cookie Settings
+    # For production cross-domain (Vercel + Render): domain=None, secure=True, samesite='none'
+    # For local dev: domain=None, secure=False, samesite='lax'
     cookie_domain: Optional[str] = Field(default=None, env="COOKIE_DOMAIN")
-    cookie_secure: bool = Field(default=True, env="COOKIE_SECURE")
-    cookie_samesite: str = Field(default="none", env="COOKIE_SAMESITE")
+    cookie_secure: bool = Field(default=False, env="COOKIE_SECURE")  # Set to True in production
+    cookie_samesite: str = Field(default="lax", env="COOKIE_SAMESITE")  # Use 'none' for production cross-domain
     
     # ===========================================
     # Database (SQLite default for development)

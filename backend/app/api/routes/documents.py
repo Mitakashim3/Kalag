@@ -68,7 +68,7 @@ async def upload_document(
     stored_filename = f"{uuid.uuid4()}_{safe_name}"
     
     # Create user-specific upload directory
-    user_upload_dir = os.path.join(settings.upload_dir, current_user.id)
+    user_upload_dir = os.path.join(settings.upload_dir, str(current_user.id))
     os.makedirs(user_upload_dir, exist_ok=True)
     
     file_path = os.path.join(user_upload_dir, stored_filename)
@@ -94,8 +94,8 @@ async def upload_document(
     # Queue background processing
     background_tasks.add_task(
         process_document,
-        document_id=document.id,
-        user_id=current_user.id
+        document_id=str(document.id),
+        user_id=str(current_user.id)
     )
     
     return document
@@ -138,8 +138,8 @@ async def process_document(document_id: str, user_id: str):
             # Step 2: Render pages to images for vision analysis
             pages_dir = os.path.join(
                 settings.upload_dir,
-                user_id,
-                f"{document_id}_pages"
+                str(user_id),
+                f"{str(document_id)}_pages"
             )
             page_images = await render_pdf_pages(document.file_path, pages_dir)
             
@@ -190,8 +190,8 @@ async def process_document(document_id: str, user_id: str):
             vector_ids = await vector_store.upsert_chunks(
                 chunks=all_chunks,
                 embeddings=embeddings,
-                user_id=user_id,
-                document_id=document_id
+                user_id=str(user_id),
+                document_id=str(document_id)
             )
             
             # Save chunk records

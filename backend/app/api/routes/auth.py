@@ -130,15 +130,18 @@ async def login(
     await db.commit()
     
     # Set refresh token as HttpOnly cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=raw_refresh,
-        httponly=True,  # JavaScript cannot access
-        secure=settings.cookie_secure,  # HTTPS only in production
-        samesite=settings.cookie_samesite,
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
-        path="/api/auth"  # Only sent to auth endpoints
-    )
+    cookie_params = {
+        "key": "refresh_token",
+        "value": raw_refresh,
+        "httponly": True,
+        "secure": settings.cookie_secure,
+        "samesite": settings.cookie_samesite,
+        "max_age": settings.refresh_token_expire_days * 24 * 60 * 60,
+        "path": "/api/auth"
+    }
+    if settings.cookie_domain:
+        cookie_params["domain"] = settings.cookie_domain
+    response.set_cookie(**cookie_params)
     
     return TokenResponse(
         access_token=access_token,
@@ -188,15 +191,18 @@ async def refresh_token(
     await db.commit()
     
     # Set new refresh token cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=raw_refresh,
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
-        path="/api/auth"
-    )
+    cookie_params = {
+        "key": "refresh_token",
+        "value": raw_refresh,
+        "httponly": True,
+        "secure": settings.cookie_secure,
+        "samesite": settings.cookie_samesite,
+        "max_age": settings.refresh_token_expire_days * 24 * 60 * 60,
+        "path": "/api/auth"
+    }
+    if settings.cookie_domain:
+        cookie_params["domain"] = settings.cookie_domain
+    response.set_cookie(**cookie_params)
     
     return RefreshResponse(
         access_token=access_token,

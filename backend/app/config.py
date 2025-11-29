@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # Application
     # ===========================================
     app_name: str = "Kalag"
-    debug: bool = True
+    debug: bool = Field(default=False, env="DEBUG")
     
     # ===========================================
     # Security & Auth
@@ -27,16 +27,16 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     
     # CORS
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = Field(default="http://localhost:5173,http://localhost:3000", env="CORS_ORIGINS")
     
     @property
     def cors_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]
     
     # Cookie Settings
-    cookie_domain: str = "localhost"
-    cookie_secure: bool = False  # True in production
-    cookie_samesite: str = "lax"
+    cookie_domain: Optional[str] = Field(default=None, env="COOKIE_DOMAIN")
+    cookie_secure: bool = Field(default=True, env="COOKIE_SECURE")
+    cookie_samesite: str = Field(default="none", env="COOKIE_SAMESITE")
     
     # ===========================================
     # Database (SQLite default for development)

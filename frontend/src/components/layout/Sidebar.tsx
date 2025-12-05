@@ -115,8 +115,8 @@ export default function Sidebar({ onNavigate, activeSection }: SidebarProps) {
         {/* Logo */}
         <div ref={logoRef} className="p-6 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-soul flex items-center justify-center soul-glow">
-              <span className="text-white font-bold text-xl">K</span>
+            <div className="w-10 h-10 rounded-xl gradient-soul flex items-center justify-center soul-glow p-1.5">
+              <img src="/KalagLogo.svg" alt="Kalag" className="w-full h-full" />
             </div>
             <div>
               <span className="font-bold text-xl">Kalag</span>

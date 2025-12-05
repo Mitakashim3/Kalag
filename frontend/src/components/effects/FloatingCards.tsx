@@ -154,8 +154,8 @@ export default function FloatingCards() {
           }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl gradient-soul flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl gradient-soul flex items-center justify-center p-1.5">
+              <img src="/KalagLogo.svg" alt="Kalag" className="w-full h-full" />
             </div>
             <div>
               <div className="w-16 h-2.5 bg-foreground/20 rounded mb-1" />

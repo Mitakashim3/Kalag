@@ -87,8 +87,8 @@ export default function KalagHome() {
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg gradient-soul flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">K</span>
+                <div className="w-8 h-8 rounded-lg gradient-soul flex items-center justify-center p-1">
+                  <img src="/KalagLogo.svg" alt="Kalag" className="w-full h-full" />
                 </div>
                 <div>
                   <span className="font-semibold">Kalag</span>

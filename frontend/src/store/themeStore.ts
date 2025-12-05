@@ -12,7 +12,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: 'light',
+      theme: 'dark',
       setTheme: (theme) => {
         set({ theme })
         updateDocumentTheme(theme)
@@ -51,7 +51,11 @@ if (typeof window !== 'undefined') {
       const { state } = JSON.parse(stored)
       updateDocumentTheme(state.theme)
     } catch {
-      // Default to light
+      // Default to dark
+      updateDocumentTheme('dark')
     }
+  } else {
+    // No stored preference, default to dark
+    updateDocumentTheme('dark')
   }
 }

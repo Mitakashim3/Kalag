@@ -108,8 +108,8 @@ export default function FloatingSidebar({ onNavigate, activeSection }: FloatingS
           >
             {/* Logo Header - Always visible */}
             <div className="flex items-center gap-3 p-4 cursor-pointer">
-              <div className="w-10 h-10 rounded-xl gradient-soul flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">K</span>
+              <div className="w-10 h-10 rounded-xl gradient-soul flex items-center justify-center shadow-lg p-1.5">
+                <img src="/KalagLogo.svg" alt="Kalag" className="w-full h-full" />
               </div>
               <div className="flex-1">
                 <span className="font-bold text-lg">Kalag</span>

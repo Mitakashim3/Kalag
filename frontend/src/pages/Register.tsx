@@ -88,8 +88,8 @@ export default function Register() {
         <div className="glass-panel rounded-3xl p-8 soul-glow">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl gradient-soul mx-auto mb-4 flex items-center justify-center soul-glow">
-              <span className="text-white font-bold text-2xl">K</span>
+            <div className="w-16 h-16 rounded-2xl gradient-soul mx-auto mb-4 flex items-center justify-center soul-glow p-2">
+              <img src="/KalagLogo.svg" alt="Kalag" className="w-full h-full" />
             </div>
             <h1 className="text-2xl font-bold mb-2">Create an Account</h1>
             <p className="text-muted-foreground">

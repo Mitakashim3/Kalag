@@ -46,6 +46,10 @@ python-dotenv>=1.0.0
 tenacity>=8.2.3  # Retry logic
 aiofiles>=23.0.0  # Async file operations
 
+# Background Jobs (optional)
+redis>=5.0.0
+rq>=1.16.2
+
 # Development
 pytest>=8.0.0
 pytest-asyncio>=0.23.3

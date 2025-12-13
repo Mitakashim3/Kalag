@@ -14,6 +14,7 @@ from app.db.schemas import SearchQuery, SearchResponse, Citation
 from app.auth import get_current_user
 from app.security import limiter, SEARCH_RATE_LIMIT, sanitize_search_query, PromptInjectionError
 from app.rag import Retriever, generate_answer
+from app.utils.concurrency import search_semaphore, acquire_or_timeout
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -43,28 +44,53 @@ async def search_documents(
     logger = logging.getLogger(__name__)
     
     start_time = time.time()
-    
+
+    # Prevent overload on small instances (free tiers)
+    try:
+        async with acquire_or_timeout(search_semaphore()):
+            return await _search_documents_impl(start_time, query, current_user, db)
+    except TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server is busy. Please try again in a few seconds."
+        )
+
+
+async def _search_documents_impl(
+    start_time: float,
+    query: SearchQuery,
+    current_user: User,
+    db: AsyncSession,
+):
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
         # Sanitize query
         safe_query = sanitize_search_query(query.query)
-        logger.info(f"Search query: {safe_query}")
     except PromptInjectionError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid query detected. Please rephrase your question."
         )
-    
+    logger.info(f"Search query: {safe_query}")
     # Initialize retriever
     retriever = Retriever(db)
     
     # Retrieve relevant chunks
-    results = await retriever.retrieve(
-        query=safe_query,
-        user_id=current_user.id,
-        top_k=query.top_k,
-        document_ids=query.document_ids,
-        include_images=query.include_images
-    )
+    try:
+        results = await retriever.retrieve(
+            query=safe_query,
+            user_id=current_user.id,
+            top_k=query.top_k,
+            document_ids=query.document_ids,
+            include_images=query.include_images
+        )
+    except TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server is busy. Please try again in a few seconds."
+        )
     
     logger.info(f"Retrieved {len(results)} results for user {current_user.id}")
     for i, r in enumerate(results[:3]):  # Log first 3 results
@@ -111,11 +137,17 @@ async def search_documents(
     ]
     
     # Generate answer
-    generation_result = await generate_answer(
-        query=safe_query,
-        context=context,
-        citations=[c.model_dump() for c in citations]
-    )
+    try:
+        generation_result = await generate_answer(
+            query=safe_query,
+            context=context,
+            citations=[c.model_dump() for c in citations]
+        )
+    except TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server is busy. Please try again in a few seconds."
+        )
     
     # Handle blocked responses (prompt injection detected)
     if generation_result.get("blocked"):
@@ -161,12 +193,29 @@ async def search_with_visual_context(
     
     Example query: "What is the Q3 revenue shown in the chart on page 5?"
     """
+    start_time = time.time()
+
+    # Prevent overload on small instances (free tiers)
+    try:
+        async with acquire_or_timeout(search_semaphore()):
+            return await _search_with_visual_context_impl(start_time, query, current_user, db)
+    except TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server is busy. Please try again in a few seconds."
+        )
+
+
+async def _search_with_visual_context_impl(
+    start_time: float,
+    query: SearchQuery,
+    current_user: User,
+    db: AsyncSession,
+):
     from app.rag import generate_with_vision
     from sqlalchemy import select
     from app.db.models import DocumentPage
-    
-    start_time = time.time()
-    
+
     try:
         safe_query = sanitize_search_query(query.query)
     except PromptInjectionError:
@@ -174,17 +223,23 @@ async def search_with_visual_context(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid query detected."
         )
-    
+
     # Retrieve relevant chunks
     retriever = Retriever(db)
-    results = await retriever.retrieve(
-        query=safe_query,
-        user_id=current_user.id,
-        top_k=query.top_k,
-        document_ids=query.document_ids,
-        include_images=True
-    )
-    
+    try:
+        results = await retriever.retrieve(
+            query=safe_query,
+            user_id=current_user.id,
+            top_k=query.top_k,
+            document_ids=query.document_ids,
+            include_images=True
+        )
+    except TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server is busy. Please try again in a few seconds."
+        )
+
     if not results:
         return SearchResponse(
             answer="No relevant information found.",
@@ -192,10 +247,10 @@ async def search_with_visual_context(
             query=query.query,
             processing_time_ms=int((time.time() - start_time) * 1000)
         )
-    
+
     # Find pages with visual content
     visual_results = [r for r in results if r.get("page_has_charts") or r.get("page_has_tables")]
-    
+
     # Get the most relevant page image
     page_image_path = None
     if visual_results:
@@ -208,20 +263,26 @@ async def search_with_visual_context(
         page = page_result.scalar_one_or_none()
         if page:
             page_image_path = page.image_path
-    
+
     # Build context
     context = "\n\n".join(
         f"[{r['document_name']}, Page {r.get('page_number', 'N/A')}]: {r['content']}"
         for r in results
     )
-    
+
     # Generate with vision
-    answer = await generate_with_vision(
-        query=safe_query,
-        context=context,
-        page_image_path=page_image_path
-    )
-    
+    try:
+        answer = await generate_with_vision(
+            query=safe_query,
+            context=context,
+            page_image_path=page_image_path
+        )
+    except TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server is busy. Please try again in a few seconds."
+        )
+
     # Build citations
     citations = [
         Citation(
@@ -234,7 +295,7 @@ async def search_with_visual_context(
         )
         for r in results
     ]
-    
+
     return SearchResponse(
         answer=answer,
         citations=citations,

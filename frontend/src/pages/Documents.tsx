@@ -62,6 +62,7 @@ export default function Documents() {
 
       const response = await api.post('/api/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
       })
 
       setDocuments(prev => [response.data, ...prev])

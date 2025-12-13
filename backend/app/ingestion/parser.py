@@ -195,60 +195,57 @@ async def render_pdf_pages(
         dpi = 100
         logger.info(f"Large PDF ({page_count} pages), reducing DPI to {dpi}")
     
-    try:
-        images = convert_from_path(
-            pdf_path,
-            dpi=dpi,
-            fmt="png",
-            thread_count=1,  # Reduce parallelism to save memory
-            first_page=1,
-            last_page=page_count
-        )
-    except Exception as e:
-        logger.error(f"Error converting PDF to images: {str(e)}")
-        # Try with poppler path for Windows
+    poppler_path = os.environ.get("POPPLER_PATH")
+    page_info = []
+
+    # Render pages one-by-one to keep memory low.
+    for page_num in range(1, page_count + 1):
         try:
             images = convert_from_path(
                 pdf_path,
                 dpi=dpi,
                 fmt="png",
-                poppler_path=os.environ.get("POPPLER_PATH"),
-                thread_count=1
+                thread_count=1,  # Reduce parallelism to save memory
+                first_page=page_num,
+                last_page=page_num,
+                poppler_path=poppler_path,
             )
-        except Exception as e2:
-            logger.error(f"Poppler fallback also failed: {str(e2)}")
+        except Exception as e:
+            logger.error(f"Error converting PDF page {page_num} to image: {str(e)}")
             raise
-    
-    page_info = []
-    
-    for i, image in enumerate(images):
-        page_num = i + 1
+
+        if not images:
+            continue
+
+        image = images[0]
+
         image_filename = f"page_{page_num:04d}.png"
         image_path = os.path.join(output_dir, image_filename)
-        
+
         # Resize large images to save memory and disk space
         max_dimension = 2048
         if image.width > max_dimension or image.height > max_dimension:
             ratio = min(max_dimension / image.width, max_dimension / image.height)
             new_size = (int(image.width * ratio), int(image.height * ratio))
             image = image.resize(new_size, Image.Resampling.LANCZOS)
-        
+
         # Save the page image with compression
         image.save(image_path, "PNG", optimize=True, compress_level=6)
-        
+
         page_info.append({
             "page_number": page_num,
             "image_path": image_path,
             "width": image.width,
             "height": image.height
         })
-        
+
         logger.debug(f"Rendered page {page_num} to {image_path}")
-        
+
         # Free memory after each page
         del image
+        del images
     
-    logger.info(f"Rendered {len(images)} pages from {pdf_path}")
+    logger.info(f"Rendered {len(page_info)} pages from {pdf_path}")
     return page_info
 
 

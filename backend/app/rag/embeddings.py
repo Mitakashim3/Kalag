@@ -7,6 +7,7 @@ from typing import List, Optional
 import logging
 
 from app.config import settings
+from app.utils.concurrency import embedding_semaphore, acquire_or_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +45,18 @@ async def generate_embedding(text: str) -> List[float]:
         return [0.0] * 768  # Return zero vector as fallback
     
     try:
-        result = genai.embed_content(
-            model=settings.gemini_embedding_model,
-            content=text,
-            task_type="retrieval_document"
-        )
-        return result['embedding']
+        import anyio
+
+        def _embed_sync():
+            return genai.embed_content(
+                model=settings.gemini_embedding_model,
+                content=text,
+                task_type="retrieval_document"
+            )
+
+        async with acquire_or_timeout(embedding_semaphore()):
+            result = await anyio.to_thread.run_sync(_embed_sync)
+        return result["embedding"]
     except Exception as e:
         logger.error(f"Embedding generation failed: {str(e)}")
         raise
@@ -66,12 +73,18 @@ async def generate_query_embedding(query: str) -> List[float]:
         return [0.0] * 768
     
     try:
-        result = genai.embed_content(
-            model=settings.gemini_embedding_model,
-            content=query,
-            task_type="retrieval_query"
-        )
-        return result['embedding']
+        import anyio
+
+        def _embed_sync():
+            return genai.embed_content(
+                model=settings.gemini_embedding_model,
+                content=query,
+                task_type="retrieval_query"
+            )
+
+        async with acquire_or_timeout(embedding_semaphore()):
+            result = await anyio.to_thread.run_sync(_embed_sync)
+        return result["embedding"]
     except Exception as e:
         logger.error(f"Query embedding generation failed: {str(e)}")
         raise
@@ -103,13 +116,18 @@ async def generate_embeddings_batch(
         batch = texts[i:i + batch_size]
         
         try:
-            # Gemini supports batch embedding
-            result = genai.embed_content(
-                model=settings.gemini_embedding_model,
-                content=batch,
-                task_type="retrieval_document"
-            )
-            all_embeddings.extend(result['embedding'])
+            import anyio
+
+            def _embed_sync():
+                return genai.embed_content(
+                    model=settings.gemini_embedding_model,
+                    content=batch,
+                    task_type="retrieval_document"
+                )
+
+            async with acquire_or_timeout(embedding_semaphore()):
+                result = await anyio.to_thread.run_sync(_embed_sync)
+            all_embeddings.extend(result["embedding"])
         except Exception as e:
             logger.error(f"Batch embedding failed at index {i}: {str(e)}")
             # Fall back to individual embeddings

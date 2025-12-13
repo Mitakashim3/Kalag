@@ -78,6 +78,25 @@ class Settings(BaseSettings):
     # Rate Limiting
     # ===========================================
     rate_limit_per_minute: int = 60
+
+    # ===========================================
+    # Background Job Queue (optional)
+    # ===========================================
+    # When set, uploads will enqueue document processing jobs instead of running
+    # in-process BackgroundTasks. This is recommended for low-tier hosting.
+    redis_url: Optional[str] = Field(default=None, env="REDIS_URL")
+    queue_name: str = Field(default="kalag", env="QUEUE_NAME")
+
+    # ===========================================
+    # Concurrency / Overload Protection
+    # ===========================================
+    # These caps are PER PROCESS. Keep low on free tiers.
+    max_concurrent_document_processes: int = Field(default=1, env="MAX_CONCURRENT_DOCUMENT_PROCESSES")
+    max_concurrent_search_requests: int = Field(default=4, env="MAX_CONCURRENT_SEARCH_REQUESTS")
+    max_concurrent_llm_requests: int = Field(default=2, env="MAX_CONCURRENT_LLM_REQUESTS")
+    max_concurrent_embedding_requests: int = Field(default=2, env="MAX_CONCURRENT_EMBEDDING_REQUESTS")
+    # If the server is busy, fail fast rather than hanging.
+    busy_timeout_seconds: float = Field(default=0.25, env="BUSY_TIMEOUT_SECONDS")
     
     class Config:
         env_file = ".env"

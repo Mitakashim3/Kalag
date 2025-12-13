@@ -15,6 +15,8 @@ export const api = axios.create({
   },
   // Important: Send cookies with requests (for refresh token)
   withCredentials: true,
+  // Avoid indefinite hangs when the backend is overloaded or down.
+  timeout: 20000,
 })
 
 // Store the current access token

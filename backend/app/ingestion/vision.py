@@ -18,6 +18,7 @@ import logging
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+from app.utils.concurrency import llm_semaphore, acquire_or_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -113,8 +114,10 @@ async def analyze_page_image(
         # Use custom prompt or default
         prompt = custom_prompt or PAGE_ANALYSIS_PROMPT
         
-        # Generate content with vision
-        response = await _call_gemini_vision(model, image, prompt)
+        # Generate content with vision (cap concurrency). Use a longer timeout because
+        # this is typically executed during background ingestion.
+        async with acquire_or_timeout(llm_semaphore(), timeout_seconds=30.0):
+            response = await _call_gemini_vision(model, image, prompt)
         
         # Parse the response to extract structured data
         result = _parse_vision_response(response)
@@ -145,7 +148,8 @@ async def _call_gemini_vision(
     
     Uses exponential backoff to handle rate limits on free tier.
     """
-    response = model.generate_content([prompt, image])
+    # Use async API to avoid blocking the event loop.
+    response = await model.generate_content_async([prompt, image])
     return response.text
 
 

@@ -11,7 +11,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: sh -c "python -m rq worker ${QUEUE_NAME:-kalag} --url $REDIS_URL & uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /api/health
     envVars:
       - key: SECRET_KEY
@@ -34,6 +34,10 @@ services:
         value: "true"
       - key: COOKIE_DOMAIN
         value: your-app.vercel.app
+      - key: REDIS_URL
+        sync: false
+      - key: QUEUE_NAME
+        value: kalag
 
 databases:
   - name: kalag-db

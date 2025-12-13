@@ -10,6 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
 from app.security.sanitizer import sanitize_for_prompt, PromptInjectionError
+from app.utils.concurrency import llm_semaphore, acquire_or_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,8 @@ USER QUESTION: {safe_query}
 Please provide a helpful answer based on the document context above."""
 
     try:
-        response = await _call_gemini(prompt)
+        async with acquire_or_timeout(llm_semaphore()):
+            response = await _call_gemini(prompt)
         
         return {
             "answer": response,
@@ -186,5 +188,6 @@ If an image is provided, use it to give more specific details about visual eleme
         image = Image.open(page_image_path)
         content.append(image)
     
-    response = model.generate_content(content)
-    return response.text
+    async with acquire_or_timeout(llm_semaphore()):
+        response = await model.generate_content_async(content)
+        return response.text

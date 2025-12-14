@@ -4,7 +4,7 @@ Centralized configuration management using Pydantic Settings
 """
 
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 from functools import lru_cache
 from typing import List, Optional
 
@@ -28,10 +28,35 @@ class Settings(BaseSettings):
     
     # CORS
     cors_origins: str = Field(default="http://localhost:5173,http://localhost:3000", env="CORS_ORIGINS")
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _normalize_cors_origins(cls, value):
+        # Support either comma-separated string or JSON-ish list env values.
+        # Examples:
+        # - https://a.com,https://b.com
+        # - ["https://a.com","https://b.com"]
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            return ",".join(str(v) for v in value)
+        if isinstance(value, str):
+            trimmed = value.strip()
+            if trimmed.startswith("[") and trimmed.endswith("]"):
+                try:
+                    import json
+
+                    parsed = json.loads(trimmed)
+                    if isinstance(parsed, list):
+                        return ",".join(str(v) for v in parsed)
+                except Exception:
+                    # Fall back to raw string.
+                    return value
+        return value
     
     @property
     def cors_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
     
     # Cookie Settings
     # For production cross-domain (Vercel + Render): domain=None, secure=True, samesite='none'
@@ -39,6 +64,20 @@ class Settings(BaseSettings):
     cookie_domain: Optional[str] = Field(default=None, env="COOKIE_DOMAIN")
     cookie_secure: bool = Field(default=False, env="COOKIE_SECURE")  # Set to True in production
     cookie_samesite: str = Field(default="lax", env="COOKIE_SAMESITE")  # Use 'none' for production cross-domain
+
+    @field_validator("cookie_samesite", mode="before")
+    @classmethod
+    def _normalize_cookie_samesite(cls, value):
+        # Render/Vercel dashboards often use capitalized values (e.g. "None").
+        if value is None:
+            return "lax"
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized == "none":
+                return "none"
+            if normalized in {"lax", "strict"}:
+                return normalized
+        return value
     
     # ===========================================
     # Database (SQLite default for development)

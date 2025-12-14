@@ -31,20 +31,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 // Redirect authenticated users away from public pages
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-xl gradient-soul flex items-center justify-center soul-glow animate-pulse p-2">
-            <img src="/KalagLogo.svg" alt="Kalag" className="w-full h-full" />
-          </div>
-          <p className="text-muted-foreground">Loading Kalag...</p>
-        </div>
-      </div>
-    )
-  }
+  const { isAuthenticated } = useAuth()
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />

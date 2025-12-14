@@ -6,7 +6,8 @@ Uses Gemini Flash to generate answers from retrieved context
 import google.generativeai as genai
 from typing import List, Dict, Any, Optional
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type, RetryError
+from google.api_core.exceptions import ResourceExhausted
 
 from app.config import settings
 from app.security.sanitizer import sanitize_for_prompt, PromptInjectionError
@@ -96,6 +97,28 @@ Please provide a helpful answer based on the document context above."""
     except Exception as e:
         # Log detailed error for debugging
         logger.error(f"Generation failed: {type(e).__name__}: {str(e)}", exc_info=True)
+
+        quota_error: Optional[ResourceExhausted] = None
+        if isinstance(e, ResourceExhausted):
+            quota_error = e
+        elif isinstance(e, RetryError):
+            # tenacity wraps the final exception
+            try:
+                last_exc = e.last_attempt.exception() if e.last_attempt else None
+                if isinstance(last_exc, ResourceExhausted):
+                    quota_error = last_exc
+            except Exception:
+                quota_error = None
+
+        if quota_error is not None:
+            # Avoid leaking internal stack traces to users.
+            return {
+                "answer": "Gemini quota/rate limit exceeded for this project. Please wait a bit and try again, or enable billing / upgrade your Gemini plan.",
+                "citations": citations,
+                "blocked": False,
+                "error": str(quota_error),
+            }
+
         return {
             "answer": f"I encountered an error while generating a response: {type(e).__name__}: {str(e)}",
             "citations": [],
@@ -104,13 +127,16 @@ Please provide a helpful answer based on the document context above."""
         }
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    # If quota is exceeded, retrying quickly won't help.
+    retry=retry_if_not_exception_type(ResourceExhausted),
+)
 async def _call_gemini(prompt: str) -> str:
     """
     Call Gemini API with retry logic and fallback to lighter model.
     """
-    from google.api_core.exceptions import ResourceExhausted
-    
     # Try primary model first
     models_to_try = [
         settings.gemini_model,

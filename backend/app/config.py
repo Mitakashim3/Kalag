@@ -6,6 +6,7 @@ Centralized configuration management using Pydantic Settings
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 
 
@@ -108,6 +109,19 @@ class Settings(BaseSettings):
     # ===========================================
     upload_dir: str = "./uploads"
     max_file_size_mb: int = 10
+
+    @field_validator("upload_dir", mode="before")
+    @classmethod
+    def _normalize_upload_dir(cls, value):
+        # Use an absolute path so that the API process and RQ worker process
+        # agree on where files live (they may have different working dirs).
+        backend_root = Path(__file__).resolve().parents[1]
+        if value is None:
+            return str((backend_root / "uploads").resolve())
+        path = Path(str(value))
+        if not path.is_absolute():
+            path = (backend_root / path)
+        return str(path.resolve())
     
     @property
     def max_file_size_bytes(self) -> int:

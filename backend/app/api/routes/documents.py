@@ -28,6 +28,42 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 logger = logging.getLogger(__name__)
 
 
+def _resolve_possible_upload_path(path_str: str) -> str:
+    """Resolve stored paths that may be relative.
+
+    In production the API process and worker process can have different
+    working directories. Older rows may also store relative paths.
+    """
+    if not path_str:
+        return path_str
+
+    p = Path(path_str)
+    if p.is_absolute():
+        return str(p)
+
+    # Try resolving relative to configured upload dir first.
+    # Example stored: ./uploads/<user>/<doc>_pages/page_0001.png
+    cleaned = path_str.lstrip("./\\")
+
+    # If it starts with uploads/, strip it so we can join to upload_dir.
+    if cleaned.startswith("uploads/") or cleaned.startswith("uploads\\"):
+        cleaned = cleaned.split("uploads", 1)[1].lstrip("/\\")
+
+    candidates = [
+        Path(settings.upload_dir) / cleaned,
+        # Also try relative to backend/ and repo root for legacy paths.
+        Path(__file__).resolve().parents[3] / path_str.lstrip("./\\"),
+        Path(__file__).resolve().parents[4] / path_str.lstrip("./\\"),
+    ]
+    for candidate in candidates:
+        try:
+            if candidate.exists():
+                return str(candidate)
+        except Exception:
+            continue
+    return path_str
+
+
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(UPLOAD_RATE_LIMIT)
 async def upload_document(
@@ -244,7 +280,8 @@ async def get_page_image(
             detail="Page not found. Document may still be processing."
         )
     
-    if not page.image_path or not os.path.exists(page.image_path):
+    resolved_path = _resolve_possible_upload_path(page.image_path)
+    if not resolved_path or not os.path.exists(resolved_path):
         logger.warning(f"Image file not found on disk: {page.image_path}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -252,7 +289,7 @@ async def get_page_image(
         )
     
     return FileResponse(
-        page.image_path,
+        resolved_path,
         media_type="image/png",
         headers={"Cache-Control": "private, max-age=3600"}
     )

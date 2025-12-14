@@ -35,15 +35,31 @@ async def process_document(document_id: str, user_id: str) -> None:
     try:
         async with AsyncSessionLocal() as db:
             # Atomically claim the document for processing to avoid double-work
-            claim = await db.execute(
-                update(Document)
-                .where(Document.id == document_id)
-                .where(Document.owner_id == user_id)
-                .where(Document.status.in_(["pending"]))
-                .values(status="processing")
-                .execution_options(synchronize_session=False)
-            )
-            if getattr(claim, "rowcount", 0) != 1:
+            claimed = False
+            try:
+                claim_result = await db.execute(
+                    update(Document)
+                    .where(Document.id == document_id)
+                    .where(Document.owner_id == user_id)
+                    .where(Document.status.in_(["pending"]))
+                    .values(status="processing")
+                    .returning(Document.id)
+                    .execution_options(synchronize_session=False)
+                )
+                claimed = claim_result.scalar_one_or_none() is not None
+            except Exception:
+                # Fallback for dialects without RETURNING support.
+                claim_result = await db.execute(
+                    update(Document)
+                    .where(Document.id == document_id)
+                    .where(Document.owner_id == user_id)
+                    .where(Document.status.in_(["pending"]))
+                    .values(status="processing")
+                    .execution_options(synchronize_session=False)
+                )
+                claimed = bool(getattr(claim_result, "rowcount", 0) == 1)
+
+            if not claimed:
                 # Already processed, processing, missing, or not owned by user.
                 return
 
@@ -53,6 +69,8 @@ async def process_document(document_id: str, user_id: str) -> None:
             if not document:
                 return
 
+            # Commit the status change early so the UI can reflect "processing"
+            # and so other workers won't re-claim it.
             await db.commit()
 
             # Step 1: Parse PDF

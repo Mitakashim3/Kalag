@@ -36,14 +36,16 @@ export default function DocumentsSection({ refreshTrigger }: DocumentsSectionPro
   const [hoveredDoc, setHoveredDoc] = useState<string | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  const hasAnimatedRef = useRef(false)
   const { toast } = useToast()
 
   useEffect(() => {
+    hasAnimatedRef.current = false
     fetchDocuments()
   }, [refreshTrigger])
 
   useEffect(() => {
-    if (!isLoading && documents.length > 0 && gridRef.current) {
+    if (!isLoading && documents.length > 0 && gridRef.current && !hasAnimatedRef.current) {
       gsap.fromTo(
         gridRef.current.children,
         { y: 30, opacity: 0 },
@@ -55,21 +57,42 @@ export default function DocumentsSection({ refreshTrigger }: DocumentsSectionPro
           ease: 'power2.out',
         }
       )
+      hasAnimatedRef.current = true
     }
   }, [isLoading, documents])
 
-  const fetchDocuments = async () => {
+  // Auto-refresh document statuses while any are pending/processing.
+  // This prevents the UI from staying "Pending" until a hard refresh.
+  useEffect(() => {
+    if (isLoading) return
+    const hasInProgress = documents.some(
+      (d) => d.status === 'pending' || d.status === 'processing'
+    )
+    if (!hasInProgress) return
+
+    const interval = window.setInterval(() => {
+      fetchDocuments({ silent: true })
+    }, 3000)
+
+    return () => window.clearInterval(interval)
+  }, [isLoading, documents])
+
+  const fetchDocuments = async (options?: { silent?: boolean }) => {
     try {
       const response = await api.get('/api/documents/')
       setDocuments(response.data.documents)
     } catch {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load documents',
-      })
+      if (!options?.silent) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load documents',
+        })
+      }
     } finally {
-      setIsLoading(false)
+      if (!options?.silent) {
+        setIsLoading(false)
+      }
     }
   }
 

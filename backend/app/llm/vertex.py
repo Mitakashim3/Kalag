@@ -112,6 +112,55 @@ async def generate_text(
     return await anyio.to_thread.run_sync(_call_sync)
 
 
+async def generate_with_image(
+    prompt: str,
+    image_path: str,
+    model_name: str,
+    *,
+    temperature: float = 0.2,
+    top_p: float = 0.8,
+    top_k: int = 40,
+    max_output_tokens: int = 2048,
+) -> str:
+    """Generate text using Vertex AI Gemini with an image input."""
+
+    await ensure_vertex_initialized()
+
+    import anyio
+    from vertexai.generative_models import (
+        GenerativeModel,
+        GenerationConfig,
+        SafetySetting,
+        HarmCategory,
+        HarmBlockThreshold,
+        Image,
+    )
+
+    vertex_model = _normalize_vertex_model_name(model_name)
+
+    safety_settings = [
+        SafetySetting(HarmCategory.HARM_CATEGORY_HARASSMENT, HarmBlockThreshold.BLOCK_ONLY_HIGH),
+        SafetySetting(HarmCategory.HARM_CATEGORY_HATE_SPEECH, HarmBlockThreshold.BLOCK_ONLY_HIGH),
+        SafetySetting(HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, HarmBlockThreshold.BLOCK_ONLY_HIGH),
+        SafetySetting(HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, HarmBlockThreshold.BLOCK_ONLY_HIGH),
+    ]
+
+    config = GenerationConfig(
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+        max_output_tokens=max_output_tokens,
+    )
+
+    def _call_sync() -> str:
+        model = GenerativeModel(vertex_model)
+        image = Image.load_from_file(image_path)
+        resp = model.generate_content([prompt, image], generation_config=config, safety_settings=safety_settings)
+        return getattr(resp, "text", None) or str(resp)
+
+    return await anyio.to_thread.run_sync(_call_sync)
+
+
 async def embed_text(
     text: str,
     model_name: str,

@@ -22,6 +22,28 @@ export const api = axios.create({
 // Store the current access token
 let currentToken: string | null = null
 
+// Deduplicate refresh calls to avoid refresh storms when many requests 401 at once.
+let refreshInFlight: Promise<string> | null = null
+
+async function refreshAccessToken(): Promise<string> {
+  if (refreshInFlight) return refreshInFlight
+
+  refreshInFlight = (async () => {
+    const response = await api.post('/api/auth/refresh')
+    const { access_token } = response.data as any
+    if (!access_token) {
+      throw new Error('Missing access_token in refresh response')
+    }
+    return access_token as string
+  })()
+
+  try {
+    return await refreshInFlight
+  } finally {
+    refreshInFlight = null
+  }
+}
+
 // Set auth token for requests
 export function setAuthToken(token: string) {
   currentToken = token
@@ -68,8 +90,7 @@ api.interceptors.response.use(
       
       try {
         // Try to refresh the token
-        const response = await api.post('/api/auth/refresh')
-        const { access_token } = response.data
+        const access_token = await refreshAccessToken()
         
         setAuthToken(access_token)
         

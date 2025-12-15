@@ -78,46 +78,59 @@ async def process_document(document_id: str, user_id: str) -> None:
             parsed = await parser.parse_pdf(document.file_path)
             document.total_pages = parsed["total_pages"]
 
-            # Step 2: Render pages to images for vision analysis
-            pages_dir = os.path.join(settings.upload_dir, str(user_id), f"{str(document_id)}_pages")
-            page_images = await render_pdf_pages(document.file_path, pages_dir)
-
-            # Step 3: Analyze pages with vision
-            image_paths = [p["image_path"] for p in page_images]
-            vision_results = await batch_analyze_pages(image_paths, concurrency=2)
-
-            # Save page records
-            for page_info, vision_result in zip(page_images, vision_results):
-                page = DocumentPage(
-                    document_id=document_id,
-                    page_number=page_info["page_number"],
-                    image_path=page_info["image_path"],
-                    width=page_info["width"],
-                    height=page_info["height"],
-                    vision_description=vision_result.get("description"),
-                    has_charts=vision_result.get("has_charts", False),
-                    has_tables=vision_result.get("has_tables", False),
-                    has_images=vision_result.get("has_images", False),
+            page_images = []
+            vision_results = []
+            if settings.enable_vision_ingestion:
+                # Step 2: Render pages to images for vision analysis
+                pages_dir = os.path.join(settings.upload_dir, str(user_id), f"{str(document_id)}_pages")
+                page_images = await render_pdf_pages(
+                    document.file_path,
+                    pages_dir,
+                    dpi=settings.vision_render_dpi,
+                    max_pages=settings.vision_max_pages,
                 )
-                db.add(page)
+
+                # Step 3: Analyze pages with vision
+                image_paths = [p["image_path"] for p in page_images]
+                vision_results = await batch_analyze_pages(
+                    image_paths,
+                    concurrency=settings.vision_concurrency,
+                )
+
+                # Save page records
+                for page_info, vision_result in zip(page_images, vision_results):
+                    page = DocumentPage(
+                        document_id=document_id,
+                        page_number=page_info["page_number"],
+                        image_path=page_info["image_path"],
+                        width=page_info["width"],
+                        height=page_info["height"],
+                        vision_description=vision_result.get("description"),
+                        has_charts=vision_result.get("has_charts", False),
+                        has_tables=vision_result.get("has_tables", False),
+                        has_images=vision_result.get("has_images", False),
+                    )
+                    db.add(page)
 
             # Step 4: Chunk text content
             chunker = TextChunker()
             text_chunks = chunker.chunk_with_pages(parsed["pages"])
 
-            vision_chunks = []
-            for page_info, vision_result in zip(page_images, vision_results):
-                if vision_result.get("description"):
-                    vision_chunks.append(
-                        {
-                            "content": vision_result["description"],
-                            "page_number": page_info["page_number"],
-                            "chunk_type": "image_description",
-                            "chunk_index": len(text_chunks) + len(vision_chunks),
-                        }
-                    )
+            all_chunks = text_chunks
+            if settings.enable_vision_ingestion:
+                vision_chunks = []
+                for page_info, vision_result in zip(page_images, vision_results):
+                    if vision_result.get("description"):
+                        vision_chunks.append(
+                            {
+                                "content": vision_result["description"],
+                                "page_number": page_info["page_number"],
+                                "chunk_type": "image_description",
+                                "chunk_index": len(text_chunks) + len(vision_chunks),
+                            }
+                        )
 
-            all_chunks = text_chunks + vision_chunks
+                all_chunks = text_chunks + vision_chunks
 
             # Step 5: Generate embeddings
             chunk_texts = [c["content"] for c in all_chunks]

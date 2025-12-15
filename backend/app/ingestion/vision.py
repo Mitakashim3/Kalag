@@ -19,11 +19,19 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
 from app.utils.concurrency import llm_semaphore, acquire_or_timeout
+from app.utils.redis_helpers import enforce_rate_limit, UpstreamRateLimitedError
 
 logger = logging.getLogger(__name__)
 
-# Configure Gemini API
-genai.configure(api_key=settings.google_api_key)
+
+def _using_vertex() -> bool:
+    return (settings.llm_provider or "").strip().lower() == "vertex"
+
+
+def _configure_aistudio() -> None:
+    if not settings.google_api_key:
+        raise RuntimeError("GOOGLE_API_KEY is required for vision when LLM_PROVIDER=aistudio")
+    genai.configure(api_key=settings.google_api_key)
 
 
 # ===========================================
@@ -105,14 +113,46 @@ async def analyze_page_image(
         True
     """
     try:
-        # Load the image
-        image = Image.open(image_path)
-        
-        # Initialize Gemini Flash model with vision
-        model = genai.GenerativeModel(settings.gemini_model)
-        
+        # Soft limit to avoid burning quota via ingestion bursts (shared via Redis).
+        try:
+            from datetime import datetime, timezone
+
+            minute_key = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+            await enforce_rate_limit(
+                key=f"kalag:rl:gemini:vision:{minute_key}",
+                limit=settings.gemini_vision_requests_per_minute,
+                window_seconds=60,
+            )
+        except UpstreamRateLimitedError:
+            raise
+
         # Use custom prompt or default
         prompt = custom_prompt or PAGE_ANALYSIS_PROMPT
+
+        if _using_vertex():
+            from app.llm.vertex import generate_with_image
+
+            # Cap concurrency and use a longer timeout (background ingestion).
+            async with acquire_or_timeout(llm_semaphore(), timeout_seconds=45.0):
+                response_text = await generate_with_image(
+                    prompt=prompt,
+                    image_path=image_path,
+                    model_name=settings.gemini_model,
+                    temperature=0.2,
+                    max_output_tokens=2048,
+                )
+
+            result = _parse_vision_response(response_text)
+            logger.info(f"Successfully analyzed page image (Vertex): {image_path}")
+            return result
+
+        _configure_aistudio()
+
+        # Load the image
+        image = Image.open(image_path)
+
+        # Initialize Gemini Flash model with vision
+        model = genai.GenerativeModel(settings.gemini_model)
         
         # Generate content with vision (cap concurrency). Use a longer timeout because
         # this is typically executed during background ingestion.

@@ -106,7 +106,7 @@ export default function Documents() {
       } catch {
         clearInterval(interval)
       }
-    }, 3000)
+    }, 8000)
   }
 
   const handleDelete = async (docId: string) => {

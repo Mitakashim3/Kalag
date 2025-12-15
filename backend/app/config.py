@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     # the API process and the RQ worker process.
     gemini_generate_requests_per_minute: int = Field(default=20, env="GEMINI_GENERATE_RPM")
     gemini_embed_requests_per_minute: int = Field(default=60, env="GEMINI_EMBED_RPM")
+    gemini_vision_requests_per_minute: int = Field(default=10, env="GEMINI_VISION_RPM")
 
     # Cache (uses Redis when configured)
     query_embedding_cache_ttl_seconds: int = Field(default=7 * 24 * 3600, env="QUERY_EMBED_CACHE_TTL")
@@ -125,6 +126,16 @@ class Settings(BaseSettings):
     # Document Parsing (LlamaParse) - Optional
     # ===========================================
     llama_cloud_api_key: Optional[str] = Field(default=None, env="LLAMA_CLOUD_API_KEY")
+
+    # ===========================================
+    # Vision ingestion (page rendering + analysis)
+    # ===========================================
+    # This can be expensive/slow on small instances. You can disable it and still
+    # have text-based RAG; visual citations/images will be unavailable.
+    enable_vision_ingestion: bool = Field(default=True, env="ENABLE_VISION_INGESTION")
+    vision_concurrency: int = Field(default=2, env="VISION_CONCURRENCY")
+    vision_max_pages: int = Field(default=50, env="VISION_MAX_PAGES")
+    vision_render_dpi: int = Field(default=150, env="VISION_RENDER_DPI")
     
     # ===========================================
     # File Storage

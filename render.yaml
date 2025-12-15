@@ -11,7 +11,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: sh -c "python -m rq.cli worker ${QUEUE_NAME:-kalag} --url $REDIS_URL & uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: SECRET_KEY
@@ -26,6 +26,68 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+      - key: LLM_PROVIDER
+        value: vertex
+      - key: GCP_PROJECT_ID
+        sync: false
+      - key: GCP_LOCATION
+        value: us-central1
+      - key: GCP_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash-001
+      - key: GEMINI_EMBEDDING_MODEL
+        value: text-embedding-004
+      - key: ENABLE_VISION_INGESTION
+        value: "true"
+      - key: LLAMA_CLOUD_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://your-app.vercel.app
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_DOMAIN
+        value: your-app.vercel.app
+      - key: REDIS_URL
+        sync: false
+      - key: QUEUE_NAME
+        value: kalag
+
+  - type: worker
+    name: kalag-worker
+    env: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m rq.cli worker ${QUEUE_NAME:-kalag} --url $REDIS_URL
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kalag-db
+          property: connectionString
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: vertex
+      - key: GCP_PROJECT_ID
+        sync: false
+      - key: GCP_LOCATION
+        value: us-central1
+      - key: GCP_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash-001
+      - key: GEMINI_EMBEDDING_MODEL
+        value: text-embedding-004
+      - key: ENABLE_VISION_INGESTION
+        value: "true"
       - key: LLAMA_CLOUD_API_KEY
         sync: false
       - key: CORS_ORIGINS

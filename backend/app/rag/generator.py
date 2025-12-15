@@ -269,10 +269,20 @@ async def generate_with_vision(
     from PIL import Image
 
     if _using_vertex():
-        # Minimal implementation: treat vision prompt + image as unsupported for now
-        # to avoid accidental expensive calls. Route users to /search/visual only when needed.
-        # You can extend this later with Vertex multi-modal support.
-        raise RuntimeError("Vision generation via Vertex is not yet wired in this deployment")
+        if not page_image_path:
+            # No image provided, fall back to normal generation.
+            return await _call_gemini(prompt)
+
+        from app.llm.vertex import generate_with_image
+
+        async with acquire_or_timeout(llm_semaphore()):
+            return await generate_with_image(
+                prompt=prompt,
+                image_path=page_image_path,
+                model_name=settings.gemini_model,
+                temperature=0.2,
+                max_output_tokens=2048,
+            )
 
     _configure_aistudio()
     import google.generativeai as genai

@@ -37,6 +37,7 @@ export default function DocumentsSection({ refreshTrigger }: DocumentsSectionPro
   const sectionRef = useRef<HTMLElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const hasAnimatedRef = useRef(false)
+  const isFetchingRef = useRef(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -72,12 +73,14 @@ export default function DocumentsSection({ refreshTrigger }: DocumentsSectionPro
 
     const interval = window.setInterval(() => {
       fetchDocuments({ silent: true })
-    }, 3000)
+    }, 8000)
 
     return () => window.clearInterval(interval)
   }, [isLoading, documents])
 
   const fetchDocuments = async (options?: { silent?: boolean }) => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
     try {
       const response = await api.get('/api/documents/')
       setDocuments(response.data.documents)
@@ -90,6 +93,7 @@ export default function DocumentsSection({ refreshTrigger }: DocumentsSectionPro
         })
       }
     } finally {
+      isFetchingRef.current = false
       if (!options?.silent) {
         setIsLoading(false)
       }

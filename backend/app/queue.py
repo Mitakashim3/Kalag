@@ -34,7 +34,7 @@ async def enqueue_document_processing(document_id: str, user_id: str) -> Optiona
     Returns None if queue is not configured.
     """
 
-    if not settings.redis_url:
+    if not settings.redis_url or not settings.enable_queue:
         return None
 
     def _enqueue() -> str:

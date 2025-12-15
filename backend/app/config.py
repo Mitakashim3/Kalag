@@ -172,6 +172,7 @@ class Settings(BaseSettings):
     # in-process BackgroundTasks. This is recommended for low-tier hosting.
     redis_url: Optional[str] = Field(default=None, env="REDIS_URL")
     queue_name: str = Field(default="kalag", env="QUEUE_NAME")
+    enable_queue: bool = Field(default=True, env="ENABLE_QUEUE")
 
     # ===========================================
     # Concurrency / Overload Protection

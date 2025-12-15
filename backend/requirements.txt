@@ -31,6 +31,9 @@ secure>=0.3.0  # Security headers
 # AI/LLM - Updated for Python 3.13 compatibility
 google-generativeai>=0.8.0
 
+# Vertex AI (Gemini on Google Cloud)
+google-cloud-aiplatform>=1.74.0
+
 # Vector Database - Python 3.13 compatible
 qdrant-client>=1.12.0
 

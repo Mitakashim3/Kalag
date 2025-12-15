@@ -15,6 +15,7 @@ from app.auth import get_current_user
 from app.security import limiter, SEARCH_RATE_LIMIT, sanitize_search_query, PromptInjectionError
 from app.rag import Retriever, generate_answer
 from app.utils.concurrency import search_semaphore, acquire_or_timeout
+from app.utils.redis_helpers import UpstreamRateLimitedError
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -85,6 +86,11 @@ async def _search_documents_impl(
             top_k=query.top_k,
             document_ids=query.document_ids,
             include_images=query.include_images
+        )
+    except UpstreamRateLimitedError:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Server is throttling embedding requests to avoid Gemini quota exhaustion. Please retry shortly."
         )
     except TimeoutError:
         raise HTTPException(

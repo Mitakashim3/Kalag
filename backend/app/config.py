@@ -96,8 +96,30 @@ class Settings(BaseSettings):
     # AI/LLM (Google Gemini) - Required for full functionality
     # ===========================================
     google_api_key: Optional[str] = Field(default=None, env="GOOGLE_API_KEY")
-    gemini_model: str = "models/gemini-2.5-flash"  # Faster and more quota-friendly
-    gemini_embedding_model: str = "models/text-embedding-004"
+    # Provider: "aistudio" (Gemini Developer API via API key) or "vertex" (Vertex AI Gemini).
+    llm_provider: str = Field(default="aistudio", env="LLM_PROVIDER")
+
+    # Vertex AI config (required when LLM_PROVIDER=vertex)
+    gcp_project_id: Optional[str] = Field(default=None, env="GCP_PROJECT_ID")
+    gcp_location: str = Field(default="us-central1", env="GCP_LOCATION")
+    # Service account JSON as an env var (recommended for Render). If omitted, uses ADC.
+    gcp_service_account_json: Optional[str] = Field(default=None, env="GCP_SERVICE_ACCOUNT_JSON")
+
+    # Model names
+    # - AI Studio uses names like "models/gemini-2.5-flash"
+    # - Vertex uses names like "gemini-2.0-flash-001" (no "models/" prefix)
+    gemini_model: str = Field(default="models/gemini-2.5-flash", env="GEMINI_MODEL")
+    gemini_embedding_model: str = Field(default="models/text-embedding-004", env="GEMINI_EMBEDDING_MODEL")
+
+    # Gemini quota safety (optional but recommended in production).
+    # These are soft limits enforced via Redis to prevent bursts across
+    # the API process and the RQ worker process.
+    gemini_generate_requests_per_minute: int = Field(default=20, env="GEMINI_GENERATE_RPM")
+    gemini_embed_requests_per_minute: int = Field(default=60, env="GEMINI_EMBED_RPM")
+
+    # Cache (uses Redis when configured)
+    query_embedding_cache_ttl_seconds: int = Field(default=7 * 24 * 3600, env="QUERY_EMBED_CACHE_TTL")
+    generation_cache_ttl_seconds: int = Field(default=10 * 60, env="GENERATION_CACHE_TTL")
     
     # ===========================================
     # Document Parsing (LlamaParse) - Optional

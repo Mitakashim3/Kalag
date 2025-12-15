@@ -43,11 +43,11 @@ services:
       - key: LLAMA_CLOUD_API_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: https://your-app.vercel.app
+        sync: false
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_DOMAIN
-        value: your-app.vercel.app
+        sync: false
       - key: REDIS_URL
         sync: false
       - key: QUEUE_NAME
@@ -93,11 +93,11 @@ services:
       - key: LLAMA_CLOUD_API_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: https://your-app.vercel.app
+        sync: false
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_DOMAIN
-        value: your-app.vercel.app
+        sync: false
       - key: REDIS_URL
         sync: false
       - key: QUEUE_NAME

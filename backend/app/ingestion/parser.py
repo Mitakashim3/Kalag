@@ -9,6 +9,7 @@ import tempfile
 import os
 import logging
 from PIL import Image
+import anyio
 
 from app.config import settings
 
@@ -112,31 +113,32 @@ class DocumentParser:
     async def _parse_with_pypdf(self, file_path: str) -> Dict[str, Any]:
         """Parse PDF using pypdf (fallback)."""
         from pypdf import PdfReader
-        
-        try:
+
+        def _parse_sync() -> Dict[str, Any]:
             reader = PdfReader(file_path)
-            
             result = {
                 "pages": [],
                 "total_pages": len(reader.pages),
                 "raw_text": "",
                 "tables": [],
-                "has_images": False
+                "has_images": False,
             }
-            
+
             for i, page in enumerate(reader.pages):
                 text = page.extract_text() or ""
                 page_content = {
                     "page_number": i + 1,
                     "text": text,
-                    "metadata": {}
+                    "metadata": {},
                 }
                 result["pages"].append(page_content)
                 result["raw_text"] += text + "\n\n"
-            
+            return result
+
+        try:
+            result = await anyio.to_thread.run_sync(_parse_sync)
             logger.info(f"Successfully parsed PDF with pypdf: {file_path}, {result['total_pages']} pages")
             return result
-            
         except Exception as e:
             logger.error(f"Error parsing PDF {file_path}: {str(e)}")
             raise
@@ -182,8 +184,12 @@ async def render_pdf_pages(
     # Convert PDF pages to images
     # Use lower DPI for large PDFs to reduce memory usage
     from pypdf import PdfReader
-    reader = PdfReader(pdf_path)
-    page_count = len(reader.pages)
+
+    def _count_pages_sync() -> int:
+        reader = PdfReader(pdf_path)
+        return len(reader.pages)
+
+    page_count = await anyio.to_thread.run_sync(_count_pages_sync)
     
     # Limit pages if PDF is too large
     if page_count > max_pages:
@@ -198,27 +204,21 @@ async def render_pdf_pages(
     poppler_path = os.environ.get("POPPLER_PATH")
     page_info = []
 
-    # Render pages one-by-one to keep memory low.
-    for page_num in range(1, page_count + 1):
-        try:
-            images = convert_from_path(
-                pdf_path,
-                dpi=dpi,
-                fmt="png",
-                thread_count=1,  # Reduce parallelism to save memory
-                first_page=page_num,
-                last_page=page_num,
-                poppler_path=poppler_path,
-            )
-        except Exception as e:
-            logger.error(f"Error converting PDF page {page_num} to image: {str(e)}")
-            raise
+    def _render_one_page_sync(page_num: int, dpi_value: int) -> Optional[Dict[str, Any]]:
+        images = convert_from_path(
+            pdf_path,
+            dpi=dpi_value,
+            fmt="png",
+            thread_count=1,  # Reduce parallelism to save memory
+            first_page=page_num,
+            last_page=page_num,
+            poppler_path=poppler_path,
+        )
 
         if not images:
-            continue
+            return None
 
         image = images[0]
-
         image_filename = f"page_{page_num:04d}.png"
         image_path = os.path.join(output_dir, image_filename)
 
@@ -232,18 +232,31 @@ async def render_pdf_pages(
         # Save the page image with compression
         image.save(image_path, "PNG", optimize=True, compress_level=6)
 
-        page_info.append({
+        result = {
             "page_number": page_num,
             "image_path": image_path,
             "width": image.width,
-            "height": image.height
-        })
-
-        logger.debug(f"Rendered page {page_num} to {image_path}")
+            "height": image.height,
+        }
 
         # Free memory after each page
         del image
         del images
+        return result
+
+    # Render pages one-by-one to keep memory low.
+    for page_num in range(1, page_count + 1):
+        try:
+            rendered = await anyio.to_thread.run_sync(_render_one_page_sync, page_num, dpi)
+        except Exception as e:
+            logger.error(f"Error converting PDF page {page_num} to image: {str(e)}")
+            raise
+
+        if not rendered:
+            continue
+
+        page_info.append(rendered)
+        logger.debug(f"Rendered page {page_num} to {rendered['image_path']}")
     
     logger.info(f"Rendered {len(page_info)} pages from {pdf_path}")
     return page_info

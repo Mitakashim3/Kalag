@@ -89,14 +89,6 @@ async def upload_document(
             detail="Only PDF files are supported"
         )
     
-    # Read and validate file size
-    contents = await file.read()
-    if len(contents) > settings.max_file_size_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {settings.max_file_size_mb}MB"
-        )
-    
     # Generate secure filename
     safe_name = sanitize_filename(file.filename or "document.pdf")
     stored_filename = f"{uuid.uuid4()}_{safe_name}"
@@ -106,10 +98,29 @@ async def upload_document(
     os.makedirs(user_upload_dir, exist_ok=True)
     
     file_path = os.path.join(user_upload_dir, stored_filename)
-    
-    # Save file
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(contents)
+
+    # Save file (streaming) + validate file size without loading into memory
+    total_bytes = 0
+    try:
+        async with aiofiles.open(file_path, "wb") as f:
+            while True:
+                chunk = await file.read(1024 * 1024)  # 1MB
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                if total_bytes > settings.max_file_size_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File too large. Maximum size is {settings.max_file_size_mb}MB",
+                    )
+                await f.write(chunk)
+    except HTTPException:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception:
+            pass
+        raise
     
     # Create document record
     document = Document(
@@ -117,7 +128,7 @@ async def upload_document(
         original_filename=safe_name,
         stored_filename=stored_filename,
         file_path=file_path,
-        file_size_bytes=len(contents),
+        file_size_bytes=total_bytes,
         mime_type="application/pdf",
         status="pending"
     )

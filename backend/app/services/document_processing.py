@@ -132,6 +132,18 @@ async def process_document(document_id: str, user_id: str) -> None:
 
                 all_chunks = text_chunks + vision_chunks
 
+            # Guardrail: cap chunks per document to reduce embedding load.
+            # This is a pragmatic safety valve for low quota / free-tier deployments.
+            if settings.max_chunks_per_document and settings.max_chunks_per_document > 0:
+                if len(all_chunks) > settings.max_chunks_per_document:
+                    logger.warning(
+                        "Capping chunks for document %s: %s -> %s",
+                        document_id,
+                        len(all_chunks),
+                        settings.max_chunks_per_document,
+                    )
+                    all_chunks = all_chunks[: settings.max_chunks_per_document]
+
             # Step 5: Generate embeddings
             chunk_texts = [c["content"] for c in all_chunks]
             embeddings = await generate_embeddings_batch(chunk_texts)

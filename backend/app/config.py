@@ -121,6 +121,10 @@ class Settings(BaseSettings):
     # Cache (uses Redis when configured)
     query_embedding_cache_ttl_seconds: int = Field(default=7 * 24 * 3600, env="QUERY_EMBED_CACHE_TTL")
     generation_cache_ttl_seconds: int = Field(default=10 * 60, env="GENERATION_CACHE_TTL")
+
+    # Embeddings batching/caps (helps avoid request-based Vertex quota exhaustion)
+    embedding_batch_size: int = Field(default=128, env="EMBEDDING_BATCH_SIZE")
+    max_chunks_per_document: int = Field(default=200, env="MAX_CHUNKS_PER_DOCUMENT")
     
     # ===========================================
     # Document Parsing (LlamaParse) - Optional

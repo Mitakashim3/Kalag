@@ -186,13 +186,40 @@ async def generate_embeddings_batch(
         logger.warning("Embeddings disabled (no provider credentials), returning empty vectors")
         return [[0.0] * 768 for _ in texts]
     
-    all_embeddings = []
+    # Allow config-driven batch sizing while preserving the function parameter.
+    # (Vertex quotas are often request-based; larger batches reduce requests.)
+    if not batch_size:
+        batch_size = 100
+    try:
+        batch_size = int(batch_size)
+    except Exception:
+        batch_size = 100
+    if getattr(settings, "embedding_batch_size", None):
+        try:
+            batch_size = int(settings.embedding_batch_size)
+        except Exception:
+            pass
+
+    all_embeddings: List[List[float]] = []
     
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         
         try:
             import anyio
+
+            # Enforce soft RPM per *request* (each batch call is one upstream request).
+            try:
+                from datetime import datetime, timezone
+
+                minute_key = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+                await enforce_rate_limit(
+                    key=f"kalag:rl:gemini:embed:{minute_key}",
+                    limit=settings.gemini_embed_requests_per_minute,
+                    window_seconds=60,
+                )
+            except UpstreamRateLimitedError:
+                raise
 
             if _using_vertex():
                 from app.llm.vertex import embed_texts
@@ -220,7 +247,20 @@ async def generate_embeddings_batch(
                 all_embeddings.extend(result["embedding"])
         except Exception as e:
             logger.error(f"Batch embedding failed at index {i}: {str(e)}")
-            # Fall back to individual embeddings
+
+            # Never fall back to per-item embedding on upstream rate-limit/quota errors.
+            # That pattern can multiply the number of failing requests and make quotas worse.
+            error_text = str(e).lower()
+            if isinstance(e, UpstreamRateLimitedError) or (
+                "quota" in error_text
+                or "resource_exhausted" in error_text
+                or "too many" in error_text
+                or "429" in error_text
+                or "online_prediction_requests" in error_text
+            ):
+                raise
+
+            # For other transient failures, fall back to individual embeddings.
             for text in batch:
                 emb = await generate_embedding(text)
                 all_embeddings.append(emb)
